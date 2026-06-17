@@ -450,6 +450,7 @@ return;
                 <option value="Level-1">Level-1</option>
                 <option value="Level-2">Level-2</option>
                 <option value="Level-3">Level-3</option>
+                <option value="Assessment">Assessment</option>
                 <option value="HR Discussion">HR Discussion</option>
                 <option value="Client Discussion">Client Discussion</option>
                 <option value="Screening">Screening</option>
