@@ -1,8 +1,11 @@
 const { google } = require("googleapis");
-const path = require("path");
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(__dirname, "../credentials/service-account.json"),
+  credentials: {
+    project_id: process.env.GOOGLE_PROJECT_ID,
+    client_email: process.env.GOOGLE_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+  },
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
@@ -31,8 +34,7 @@ async function findRegisteredCandidate(candidateId) {
   const dataRows = rows.slice(1);
 
   const candidate = dataRows.find(
-    (row) =>
-      String(row[13]).trim() === String(candidateId).trim()
+    (row) => String(row[13]).trim() === String(candidateId).trim()
   );
 
   if (!candidate) return null;
@@ -52,8 +54,7 @@ async function findCandidateDetails(candidateId) {
   const dataRows = rows.slice(1);
 
   const candidate = dataRows.find(
-    (row) =>
-      String(row[0]).trim() === String(candidateId).trim()
+    (row) => String(row[0]).trim() === String(candidateId).trim()
   );
 
   if (!candidate) return null;
