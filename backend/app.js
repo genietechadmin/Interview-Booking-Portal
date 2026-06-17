@@ -9,7 +9,16 @@ const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://interview-booking-portal-frontend.onrender.com",
+    ],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
