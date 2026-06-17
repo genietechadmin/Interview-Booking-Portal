@@ -62,11 +62,13 @@ async function getTrainersController(req, res) {
       trainers,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to fetch trainers",
-      error: error.message,
-    });
-  }
+  console.error("Trainer fetch error:", error);
+
+  res.status(500).json({
+    message: "Failed to fetch trainers",
+    error: error.message,
+  });
+}
 }
 
 async function assignTrainerController(req, res) {
