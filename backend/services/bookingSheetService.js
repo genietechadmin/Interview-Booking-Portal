@@ -1,5 +1,4 @@
 const { google } = require("googleapis");
-const path = require("path");
 
 const auth = new google.auth.GoogleAuth({
   credentials: {
@@ -7,9 +6,7 @@ const auth = new google.auth.GoogleAuth({
     client_email: process.env.GOOGLE_CLIENT_EMAIL,
     private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
   },
-  scopes: [
-    "https://www.googleapis.com/auth/spreadsheets",
-  ],
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
 const BOOKINGS_RANGE = "Bookings!A:O";
@@ -41,7 +38,7 @@ function mapRowToBooking(row) {
     endTime: row[10],
     status: row[11],
     eventId: row[12] || "",
-    trainerName: row[13] || ""
+    trainerName: row[13] || "",
   };
 }
 
@@ -100,13 +97,11 @@ function normalizeDate(date) {
     return cleanDate;
   }
 
-  // DD-MM-YYYY
   if (/^\d{2}-\d{2}-\d{4}$/.test(cleanDate)) {
     const [day, month, year] = cleanDate.split("-");
     return `${year}-${month}-${day}`;
   }
 
-  // DD/MM/YYYY
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(cleanDate)) {
     const [day, month, year] = cleanDate.split("/");
     return `${year}-${month}-${day}`;
@@ -165,27 +160,15 @@ function convertToDateTime(date, startTime) {
   return new Date(`${normalizedDate}T${normalizedTime}:00+05:30`);
 }
 
-function getTodayStart() {
-  const now = new Date();
-
-  return new Date(
-    now.toLocaleString("en-US", {
-      timeZone: "Asia/Kolkata",
-    })
-  );
-}
-
 function getFutureSortedBookings(bookings) {
   return bookings
     .filter((booking) => {
       const status = String(booking.status || "").trim().toLowerCase();
-
       return status !== "cancelled" && status !== "completed";
     })
     .sort((a, b) => {
       const dateA = convertToDateTime(a.date, a.startTime);
       const dateB = convertToDateTime(b.date, b.startTime);
-
       return dateA - dateB;
     });
 }
@@ -200,6 +183,7 @@ async function getBookingHistory(candidateId) {
 
   const rows = response.data.values || [];
   const dataRows = rows.slice(1);
+
   const bookings = dataRows
     .filter(
       (row) =>
@@ -219,7 +203,8 @@ async function updateBooking(
   newEndTime,
   newLinkReceived,
   newStatus,
-  newEventId
+  newEventId,
+  oldEventId = null
 ) {
   const sheets = await getSheetsClient();
 
@@ -242,7 +227,11 @@ async function updateBooking(
     const sameStartTime =
       normalizeTime(row[9]) === normalizeTime(oldStartTime);
 
-    if (sameCandidate && sameDate && sameStartTime) {
+    const sameEventId =
+      oldEventId === null ||
+      String(row[12] || "").trim() === String(oldEventId || "").trim();
+
+    if (sameCandidate && sameDate && sameStartTime && sameEventId) {
       rowIndex = index + 1;
     }
   });
@@ -251,56 +240,44 @@ async function updateBooking(
     throw new Error("Booking row not found in sheet");
   }
 
-const oldRow = rows[rowIndex - 1];
+  const oldRow = rows[rowIndex - 1];
 
-let finalLinkReceived = newLinkReceived || oldRow[8] || "No";
-let finalStatus = newStatus || getStatusFromLinkReceived(finalLinkReceived);
-const finalEventId = newEventId || oldRow[12] || "";
+  let finalLinkReceived = newLinkReceived || oldRow[8] || "No";
+  let finalStatus =
+    newStatus || getStatusFromLinkReceived(finalLinkReceived);
+  const finalEventId = newEventId || oldRow[12] || "";
 
-if (
-  String(finalStatus).trim().toLowerCase() === "booked" ||
-  finalEventId
-) {
-  finalLinkReceived = "Yes";
-  finalStatus = "Booked";
-}
+  if (
+    String(finalStatus).trim().toLowerCase() === "booked" ||
+    finalEventId
+  ) {
+    finalLinkReceived = "Yes";
+    finalStatus = "Booked";
+  }
 
-console.log("================================");
-console.log("Updating booking row:", rowIndex);
-console.log("Candidate ID:", candidateId);
-console.log("Old Date:", oldDate);
-console.log("Old Start Time:", oldStartTime);
-console.log("New Date:", newDate);
-console.log("New Start Time:", newStartTime);
-console.log("New End Time:", newEndTime);
-console.log("Final Link:", finalLinkReceived);
-console.log("Final Status:", finalStatus);
-console.log("Final Event ID:", finalEventId);
-console.log("================================");
-
-await sheets.spreadsheets.values.update({
-  spreadsheetId: process.env.BOOKING_DETAILS_SHEET_ID,
-  range: `Bookings!C${rowIndex}:N${rowIndex}`,
-  valueInputOption: "USER_ENTERED",
-  resource: {
-    values: [
-      [
-        newDate,
-        oldRow[3],
-        oldRow[4],
-        oldRow[5],
-        oldRow[6],
-        oldRow[7],
-        finalLinkReceived,
-        newStartTime,
-        newEndTime,
-        finalStatus,
-        finalEventId,
-        oldRow[13] || "",
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: process.env.BOOKING_DETAILS_SHEET_ID,
+    range: `Bookings!C${rowIndex}:N${rowIndex}`,
+    valueInputOption: "USER_ENTERED",
+    resource: {
+      values: [
+        [
+          newDate,
+          oldRow[3],
+          oldRow[4],
+          oldRow[5],
+          oldRow[6],
+          oldRow[7],
+          finalLinkReceived,
+          newStartTime,
+          newEndTime,
+          finalStatus,
+          finalEventId,
+          oldRow[13] || "",
+        ],
       ],
-    ],
-  },
-});
+    },
+  });
 }
 
 async function cancelBooking(candidateId, date, startTime) {
@@ -321,10 +298,10 @@ async function cancelBooking(candidateId, date, startTime) {
       String(row[0]).trim() === String(candidateId).trim();
 
     const sameDate =
-      String(row[2]).trim() === String(date).trim();
+      normalizeDate(row[2]) === normalizeDate(date);
 
     const sameStartTime =
-      String(row[9]).trim() === String(startTime).trim();
+      normalizeTime(row[9]) === normalizeTime(startTime);
 
     if (sameCandidate && sameDate && sameStartTime) {
       rowIndex = index + 1;
@@ -365,12 +342,15 @@ async function confirmBookingLink(candidateId, date, startTime, eventId) {
       String(row[0]).trim() === String(candidateId).trim();
 
     const sameDate =
-      String(row[2]).trim() === String(date).trim();
+      normalizeDate(row[2]) === normalizeDate(date);
 
     const sameStartTime =
-      String(row[9]).trim() === String(startTime).trim();
+      normalizeTime(row[9]) === normalizeTime(startTime);
 
-    if (sameCandidate && sameDate && sameStartTime) {
+    const isWaitingList =
+      String(row[11] || "").trim().toLowerCase() === "waiting list";
+
+    if (sameCandidate && sameDate && sameStartTime && isWaitingList) {
       rowIndex = index + 1;
     }
   });
@@ -527,10 +507,10 @@ async function assignTrainer(
       String(row[0]).trim() === String(candidateId).trim();
 
     const sameDate =
-      String(row[2]).trim() === String(date).trim();
+      normalizeDate(row[2]) === normalizeDate(date);
 
     const sameStartTime =
-      String(row[9]).trim() === String(startTime).trim();
+      normalizeTime(row[9]) === normalizeTime(startTime);
 
     if (sameCandidate && sameDate && sameStartTime) {
       rowIndex = index + 1;
@@ -549,16 +529,17 @@ async function assignTrainer(
     range: `Bookings!N${rowIndex}`,
     valueInputOption: "USER_ENTERED",
     resource: {
-      values: [[trainer.trainerName]]
+      values: [[trainer.trainerName]],
     },
   });
 
   return {
-  ...booking,
-  trainerName: trainer.trainerName,
-  isTrainerChanged: Boolean(oldTrainerName),
-};
+    ...booking,
+    trainerName: trainer.trainerName,
+    isTrainerChanged: Boolean(oldTrainerName),
+  };
 }
+
 async function completeBooking(candidateId, date, startTime) {
   const sheets = await getSheetsClient();
 
@@ -576,10 +557,10 @@ async function completeBooking(candidateId, date, startTime) {
       String(row[0]).trim() === String(candidateId).trim();
 
     const sameDate =
-      String(row[2]).trim() === String(date).trim();
+      normalizeDate(row[2]) === normalizeDate(date);
 
     const sameStartTime =
-      String(row[9]).trim() === String(startTime).trim();
+      normalizeTime(row[9]) === normalizeTime(startTime);
 
     if (sameCandidate && sameDate && sameStartTime) {
       rowIndex = index + 1;
@@ -601,6 +582,7 @@ async function completeBooking(candidateId, date, startTime) {
 
   return true;
 }
+
 module.exports = {
   saveBooking,
   getBookingHistory,
