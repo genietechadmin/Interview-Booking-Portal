@@ -251,9 +251,9 @@ async function updateBooking(
     throw new Error("Booking row not found in sheet");
   }
 
-  const oldRow = rows[rowIndex - 1];
+const oldRow = rows[rowIndex - 1];
 
-  let finalLinkReceived = newLinkReceived || oldRow[8] || "No";
+let finalLinkReceived = newLinkReceived || oldRow[8] || "No";
 let finalStatus = newStatus || getStatusFromLinkReceived(finalLinkReceived);
 const finalEventId = newEventId || oldRow[12] || "";
 
@@ -265,23 +265,14 @@ if (
   finalStatus = "Booked";
 }
 
-  const finalEventId = newEventId || oldRow[12] || "";
-
-  if (finalEventId) {
-    finalLinkReceived = "Yes";
-    finalStatus = "Booked";
-  }
-
-  console.log("================================");
+console.log("================================");
 console.log("Updating booking row:", rowIndex);
 console.log("Candidate ID:", candidateId);
 console.log("Old Date:", oldDate);
 console.log("Old Start Time:", oldStartTime);
-
 console.log("New Date:", newDate);
 console.log("New Start Time:", newStartTime);
 console.log("New End Time:", newEndTime);
-
 console.log("Final Link:", finalLinkReceived);
 console.log("Final Status:", finalStatus);
 console.log("Final Event ID:", finalEventId);
@@ -292,24 +283,24 @@ await sheets.spreadsheets.values.update({
   range: `Bookings!C${rowIndex}:N${rowIndex}`,
   valueInputOption: "USER_ENTERED",
   resource: {
-      values: [
-        [
-          newDate,
-          oldRow[3],
-          oldRow[4],
-          oldRow[5],
-          oldRow[6],
-          oldRow[7],
-          finalLinkReceived,
-          newStartTime,
-          newEndTime,
-          finalStatus,
-          finalEventId,
-          oldRow[13] || "",
-        ],
+    values: [
+      [
+        newDate,
+        oldRow[3],
+        oldRow[4],
+        oldRow[5],
+        oldRow[6],
+        oldRow[7],
+        finalLinkReceived,
+        newStartTime,
+        newEndTime,
+        finalStatus,
+        finalEventId,
+        oldRow[13] || "",
       ],
-    },
-  });
+    ],
+  },
+});
 }
 
 async function cancelBooking(candidateId, date, startTime) {
