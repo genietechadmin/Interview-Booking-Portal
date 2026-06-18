@@ -80,14 +80,37 @@ async function saveBooking(data) {
 
 function normalizeDate(date) {
   const monthMap = {
-    Jan: "01", Feb: "02", Mar: "03", Apr: "04",
-    May: "05", Jun: "06", Jul: "07", Aug: "08",
-    Sep: "09", Oct: "10", Nov: "11", Dec: "12",
+    Jan: "01",
+    Feb: "02",
+    Mar: "03",
+    Apr: "04",
+    May: "05",
+    Jun: "06",
+    Jul: "07",
+    Aug: "08",
+    Sep: "09",
+    Oct: "10",
+    Nov: "11",
+    Dec: "12",
   };
 
   const cleanDate = String(date || "").trim();
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) return cleanDate;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+    return cleanDate;
+  }
+
+  // DD-MM-YYYY
+  if (/^\d{2}-\d{2}-\d{4}$/.test(cleanDate)) {
+    const [day, month, year] = cleanDate.split("-");
+    return `${year}-${month}-${day}`;
+  }
+
+  // DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(cleanDate)) {
+    const [day, month, year] = cleanDate.split("/");
+    return `${year}-${month}-${day}`;
+  }
 
   const parts = cleanDate.split(" ");
 
@@ -96,7 +119,9 @@ function normalizeDate(date) {
     const month = monthMap[parts[1]];
     const year = parts[2];
 
-    if (month && year) return `${year}-${month}-${day}`;
+    if (month && year) {
+      return `${year}-${month}-${day}`;
+    }
   }
 
   return "";
