@@ -179,10 +179,6 @@ function getFutureSortedBookings(bookings) {
   const now = getTodayStart();
 
   return bookings
-  .filter((booking) => {
-  const status = String(booking.status || "").trim().toLowerCase();
-  return status !== "completed";
-})
     .filter((booking) => {
       const bookingDateTime = convertToDateTime(
         booking.date,
