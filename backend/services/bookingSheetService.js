@@ -254,7 +254,16 @@ async function updateBooking(
   const oldRow = rows[rowIndex - 1];
 
   let finalLinkReceived = newLinkReceived || oldRow[8] || "No";
-  let finalStatus = getStatusFromLinkReceived(finalLinkReceived);
+let finalStatus = newStatus || getStatusFromLinkReceived(finalLinkReceived);
+const finalEventId = newEventId || oldRow[12] || "";
+
+if (
+  String(finalStatus).trim().toLowerCase() === "booked" ||
+  finalEventId
+) {
+  finalLinkReceived = "Yes";
+  finalStatus = "Booked";
+}
 
   const finalEventId = newEventId || oldRow[12] || "";
 
@@ -263,11 +272,26 @@ async function updateBooking(
     finalStatus = "Booked";
   }
 
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: process.env.BOOKING_DETAILS_SHEET_ID,
-    range: `Bookings!C${rowIndex}:N${rowIndex}`,
-    valueInputOption: "USER_ENTERED",
-    resource: {
+  console.log("================================");
+console.log("Updating booking row:", rowIndex);
+console.log("Candidate ID:", candidateId);
+console.log("Old Date:", oldDate);
+console.log("Old Start Time:", oldStartTime);
+
+console.log("New Date:", newDate);
+console.log("New Start Time:", newStartTime);
+console.log("New End Time:", newEndTime);
+
+console.log("Final Link:", finalLinkReceived);
+console.log("Final Status:", finalStatus);
+console.log("Final Event ID:", finalEventId);
+console.log("================================");
+
+await sheets.spreadsheets.values.update({
+  spreadsheetId: process.env.BOOKING_DETAILS_SHEET_ID,
+  range: `Bookings!C${rowIndex}:N${rowIndex}`,
+  valueInputOption: "USER_ENTERED",
+  resource: {
       values: [
         [
           newDate,

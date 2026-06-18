@@ -631,16 +631,16 @@ if (isPastTime(newStartTime)) {
       }
 
       await updateBooking(
-  candidateId,
-  oldDate,
-  oldStartTime,
-  formatDate(newStartTime),
-  formatTime(newStartTime),
-  formatTime(newEndTime),
-  "Yes",
-  "Booked",
-  currentEventId || ""
-);
+        candidateId,
+        oldDate,
+        oldStartTime,
+        formatDate(newStartTime),
+        formatTime(newStartTime),
+        formatTime(newEndTime),
+        "Yes",
+        "Rescheduled",
+        currentEventId || ""
+      );
 
       return res.json({
         message: "Booking rescheduled successfully",
