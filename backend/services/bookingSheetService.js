@@ -253,17 +253,10 @@ async function updateBooking(
 
   const oldRow = rows[rowIndex - 1];
 
-  const oldStatus = oldRow[11];
-  const oldLinkReceived = oldRow[8];
+  const updatedLinkReceived = newLinkReceived || oldRow[8] || "No";
 
-  let updatedStatus = "Rescheduled";
-
-  if (
-    String(oldStatus).trim().toLowerCase() === "waiting list" ||
-    String(oldLinkReceived).trim().toLowerCase() === "no"
-  ) {
-    updatedStatus = "Waiting List";
-  }
+const updatedStatus =
+  newStatus || getStatusFromLinkReceived(updatedLinkReceived);
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: process.env.BOOKING_DETAILS_SHEET_ID,
@@ -278,10 +271,10 @@ async function updateBooking(
           oldRow[5],
           oldRow[6],
           oldRow[7],
-          newLinkReceived || oldRow[8],
-          newStartTime,
-          newEndTime,
-          newStatus || updatedStatus,
+          updatedLinkReceived,
+newStartTime,
+newEndTime,
+updatedStatus,
           newEventId || oldRow[12] || "",
           oldRow[13] || "",
           oldRow[14] || "",
