@@ -255,12 +255,11 @@ async function updateBooking(
 
   const updatedLinkReceived = newLinkReceived || oldRow[8] || "No";
 
-const updatedStatus =
-  newStatus || getStatusFromLinkReceived(updatedLinkReceived);
+  const updatedStatus = getStatusFromLinkReceived(updatedLinkReceived);
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: process.env.BOOKING_DETAILS_SHEET_ID,
-    range: `Bookings!C${rowIndex}:O${rowIndex}`,
+    range: `Bookings!C${rowIndex}:N${rowIndex}`,
     valueInputOption: "USER_ENTERED",
     resource: {
       values: [
@@ -272,12 +271,11 @@ const updatedStatus =
           oldRow[6],
           oldRow[7],
           updatedLinkReceived,
-newStartTime,
-newEndTime,
-updatedStatus,
+          newStartTime,
+          newEndTime,
+          updatedStatus,
           newEventId || oldRow[12] || "",
           oldRow[13] || "",
-          oldRow[14] || "",
         ],
       ],
     },
