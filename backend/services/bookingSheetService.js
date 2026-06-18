@@ -200,14 +200,6 @@ async function getBookingHistory(candidateId) {
 
   const rows = response.data.values || [];
   const dataRows = rows.slice(1);
-  console.log("History candidateId:", candidateId);
-console.log("Total sheet rows:", dataRows.length);
-
-const matchedRows = dataRows.filter(
-  (row) => String(row[0]).trim() === String(candidateId).trim()
-);
-
-console.log("Matched rows:", matchedRows);
   const bookings = dataRows
     .filter(
       (row) =>
