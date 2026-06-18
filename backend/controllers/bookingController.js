@@ -560,16 +560,17 @@ if (isPastTime(newStartTime)) {
         });
 
         await updateBooking(
-          candidateId,
-          oldDate,
-          oldStartTime,
-          formatDate(newStartTime),
-          formatTime(newStartTime),
-          formatTime(newEndTime),
-          "Yes",
-          "Booked",
-          event.id
-        );
+  candidateId,
+  oldDate,
+  oldStartTime,
+  formatDate(newStartTime),
+  formatTime(newStartTime),
+  formatTime(newEndTime),
+  "Yes",
+  "Booked",
+  event.id,
+  currentBooking.eventId || ""
+);
 
         const registeredCandidate = await findRegisteredCandidate(candidateId);
 
