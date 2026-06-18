@@ -1,18 +1,46 @@
-const nodemailer = require("nodemailer");
+const { google } = require("googleapis");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  family: 4,
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GMAIL_CLIENT_ID,
+  process.env.GMAIL_CLIENT_SECRET,
+  process.env.GMAIL_REDIRECT_URI || "https://developers.google.com/oauthplayground"
+);
+
+oauth2Client.setCredentials({
+  refresh_token: process.env.GMAIL_REFRESH_TOKEN,
 });
+
+const gmail = google.gmail({
+  version: "v1",
+  auth: oauth2Client,
+});
+
+function makeEmail({ to, subject, text, html }) {
+  const message = [
+    `From: "Genie Tech Consultants" <${process.env.GMAIL_USER}>`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/html; charset="UTF-8"',
+    "",
+    html || text,
+  ].join("\n");
+
+  return Buffer.from(message)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+async function sendMail({ to, subject, text, html }) {
+  const raw = makeEmail({ to, subject, text, html });
+
+  await gmail.users.messages.send({
+    userId: "me",
+    requestBody: { raw },
+  });
+}
 
 function emailLayout(title, content) {
   return `
@@ -69,8 +97,7 @@ async function sendOtpEmail(to, otp) {
     `
   );
 
-  await transporter.sendMail({
-    from: `"Genie Tech Consultants" <${process.env.EMAIL_USER}>`,
+  await sendMail({
     to,
     subject: "Your OTP - Genie Interview Booking",
     text: `Your OTP is ${otp}. It is valid for 5 minutes.`,
@@ -116,8 +143,7 @@ async function sendBookingConfirmation(to, data) {
     `
   );
 
-  await transporter.sendMail({
-    from: `"Genie Tech Consultants" <${process.env.EMAIL_USER}>`,
+  await sendMail({
     to,
     subject: "Interview Slot Confirmed - Genie Tech Consultants",
     text: `Your interview has been booked on ${data.date}, ${data.startTime} - ${data.endTime}.`,
@@ -151,8 +177,7 @@ async function sendRescheduleConfirmation(to, data) {
     `
   );
 
-  await transporter.sendMail({
-    from: `"Genie Tech Consultants" <${process.env.EMAIL_USER}>`,
+  await sendMail({
     to,
     subject: "Interview Slot Rescheduled - Genie Tech Consultants",
     text: `Your interview has been rescheduled to ${data.date}, ${data.startTime} - ${data.endTime}.`,
@@ -186,18 +211,16 @@ async function sendCancelConfirmation(to, data) {
     `
   );
 
-  await transporter.sendMail({
-    from: `"Genie Tech Consultants" <${process.env.EMAIL_USER}>`,
+  await sendMail({
     to,
     subject: "Interview Slot Cancelled - Genie Tech Consultants",
-    text: `Your interview booking has been cancelled.`,
+    text: "Your interview booking has been cancelled.",
     html,
   });
 }
+
 async function sendTrainerAssignedEmail(to, data) {
-  const title = data.isTrainerChanged
-    ? "Trainer Changed"
-    : "Trainer Assigned";
+  const title = data.isTrainerChanged ? "Trainer Changed" : "Trainer Assigned";
 
   const message = data.isTrainerChanged
     ? "your assigned trainer has been changed for your interview preparation."
@@ -256,14 +279,14 @@ async function sendTrainerAssignedEmail(to, data) {
     `
   );
 
-  await transporter.sendMail({
-    from: `"Genie Tech Consultants" <${process.env.EMAIL_USER}>`,
+  await sendMail({
     to,
     subject,
     text: `${title}: ${data.trainerName} (${data.trainerNumber || "-"})`,
     html,
   });
 }
+
 module.exports = {
   sendOtpEmail,
   sendBookingConfirmation,
