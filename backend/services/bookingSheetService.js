@@ -237,10 +237,10 @@ async function updateBooking(
       String(row[0]).trim() === String(candidateId).trim();
 
     const sameDate =
-      String(row[2]).trim() === String(oldDate).trim();
+      normalizeDate(row[2]) === normalizeDate(oldDate);
 
     const sameStartTime =
-      String(row[9]).trim() === String(oldStartTime).trim();
+      normalizeTime(row[9]) === normalizeTime(oldStartTime);
 
     if (sameCandidate && sameDate && sameStartTime) {
       rowIndex = index + 1;
@@ -253,14 +253,14 @@ async function updateBooking(
 
   const oldRow = rows[rowIndex - 1];
 
+  let finalLinkReceived = newLinkReceived || oldRow[8] || "No";
+  let finalStatus = getStatusFromLinkReceived(finalLinkReceived);
+
   const finalEventId = newEventId || oldRow[12] || "";
 
-  let updatedLinkReceived = newLinkReceived || oldRow[8] || "No";
-  let updatedStatus = getStatusFromLinkReceived(updatedLinkReceived);
-
   if (finalEventId) {
-    updatedLinkReceived = "Yes";
-    updatedStatus = "Booked";
+    finalLinkReceived = "Yes";
+    finalStatus = "Booked";
   }
 
   await sheets.spreadsheets.values.update({
@@ -276,10 +276,10 @@ async function updateBooking(
           oldRow[5],
           oldRow[6],
           oldRow[7],
-          updatedLinkReceived,
+          finalLinkReceived,
           newStartTime,
           newEndTime,
-          updatedStatus,
+          finalStatus,
           finalEventId,
           oldRow[13] || "",
         ],
