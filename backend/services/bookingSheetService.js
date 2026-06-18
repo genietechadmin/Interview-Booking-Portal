@@ -176,16 +176,11 @@ function getTodayStart() {
 }
 
 function getFutureSortedBookings(bookings) {
-  const now = getTodayStart();
-
   return bookings
     .filter((booking) => {
-      const bookingDateTime = convertToDateTime(
-        booking.date,
-        booking.startTime
-      );
+      const status = String(booking.status || "").trim().toLowerCase();
 
-      return bookingDateTime >= now;
+      return status !== "cancelled" && status !== "completed";
     })
     .sort((a, b) => {
       const dateA = convertToDateTime(a.date, a.startTime);
@@ -205,7 +200,14 @@ async function getBookingHistory(candidateId) {
 
   const rows = response.data.values || [];
   const dataRows = rows.slice(1);
+  console.log("History candidateId:", candidateId);
+console.log("Total sheet rows:", dataRows.length);
 
+const matchedRows = dataRows.filter(
+  (row) => String(row[0]).trim() === String(candidateId).trim()
+);
+
+console.log("Matched rows:", matchedRows);
   const bookings = dataRows
     .filter(
       (row) =>
