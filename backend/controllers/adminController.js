@@ -37,14 +37,36 @@ async function adminLogin(req, res) {
   }
 }
 
+function isPastBooking(date) {
+  if (!date) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const bookingDate = new Date(date);
+  bookingDate.setHours(0, 0, 0, 0);
+
+  return bookingDate < today;
+}
+
 async function getAdminBookings(req, res) {
   try {
     const { status } = req.query;
 
     const bookings = await getAllBookings(status);
 
+    const visibleBookings = bookings.filter((booking) => {
+      const bookingStatus = booking.status?.toLowerCase();
+
+      const isCompleted = bookingStatus === "completed";
+      const isCancelled = bookingStatus === "cancelled";
+      const isPast = isPastBooking(booking.date);
+
+      return !isCompleted && !isCancelled && !isPast;
+    });
+
     res.json({
-      bookings,
+      bookings: visibleBookings,
     });
   } catch (error) {
     res.status(500).json({
