@@ -301,8 +301,48 @@ const completeBooking = async (booking) => {
 const parseBookingDateTime = (date, time) => {
   if (!date || !time) return null;
 
-  const normalizedDate = new Date(`${date} ${time}`);
-  return isNaN(normalizedDate.getTime()) ? null : normalizedDate;
+  const months = {
+    Jan: "01",
+    Feb: "02",
+    Mar: "03",
+    Apr: "04",
+    May: "05",
+    Jun: "06",
+    Jul: "07",
+    Aug: "08",
+    Sep: "09",
+    Oct: "10",
+    Nov: "11",
+    Dec: "12",
+  };
+
+  const dateParts = String(date).trim().split(" ");
+  if (dateParts.length !== 3) return null;
+
+  const [day, monthText, year] = dateParts;
+  const month = months[monthText];
+
+  if (!month) return null;
+
+  const timeParts = String(time).trim().split(" ");
+  if (timeParts.length !== 2) return null;
+
+  let [hour, minute] = timeParts[0].split(":");
+  const meridian = timeParts[1].toLowerCase();
+
+  hour = Number(hour);
+
+  if (meridian === "pm" && hour !== 12) hour += 12;
+  if (meridian === "am" && hour === 12) hour = 0;
+
+  const dateTime = new Date(
+    `${year}-${month}-${day.padStart(2, "0")}T${String(hour).padStart(
+      2,
+      "0"
+    )}:${minute}:00`
+  );
+
+  return isNaN(dateTime.getTime()) ? null : dateTime;
 };
 
 const pendingTrainerBookings = bookings.filter((booking) => {
