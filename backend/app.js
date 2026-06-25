@@ -21,6 +21,14 @@ app.use(
 
 app.use(express.json());
 
+// Prevent browser/API caching
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/candidate", candidateRoutes);
 app.use("/api/booking", bookingRoutes);

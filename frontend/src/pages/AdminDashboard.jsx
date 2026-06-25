@@ -26,7 +26,11 @@ function AdminDashboard() {
         url += `?status=${selectedStatus}`;
       }
 
-      const response = await API.get(url);
+      const response = await API.get(url, {
+  headers: {
+    "Cache-Control": "no-cache",
+  },
+});
       setBookings(response.data.bookings || []);
     } catch (error) {
       console.error(error);
@@ -44,7 +48,11 @@ function AdminDashboard() {
   };
 const fetchTrainers = async () => {
   try {
-    const response = await API.get("/admin/trainers");
+    const response = await API.get("/admin/trainers", {
+  headers: {
+    "Cache-Control": "no-cache",
+  },
+});
     setTrainers(response.data.trainers || []);
   } catch {
     Swal.fire({
@@ -57,16 +65,43 @@ const fetchTrainers = async () => {
   }
 };
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+  const token = localStorage.getItem("adminToken");
 
-    if (!token) {
-      navigate("/admin");
-      return;
-    }
+  if (!token) {
+    navigate("/admin");
+    return;
+  }
 
-    fetchBookings();
+  fetchBookings(status);
+  fetchTrainers();
+
+  const interval = setInterval(() => {
+    fetchBookings(status);
     fetchTrainers();
-  }, []);
+  }, 30000); // Refresh every 30 seconds
+
+  return () => clearInterval(interval);
+}, [navigate, status]);
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      fetchBookings(status);
+      fetchTrainers();
+    }
+  };
+
+  document.addEventListener(
+    "visibilitychange",
+    handleVisibilityChange
+  );
+
+  return () => {
+    document.removeEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+  };
+}, [status]);
 
   const logout = () => {
     localStorage.removeItem("adminToken");
