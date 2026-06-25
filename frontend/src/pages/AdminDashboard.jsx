@@ -11,6 +11,7 @@ function AdminDashboard() {
   const [selectedRows, setSelectedRows] = useState({});
   const [loading, setLoading] = useState(false);
   const [trainers, setTrainers] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const navigate = useNavigate();
 
@@ -297,6 +298,41 @@ const completeBooking = async (booking) => {
     });
   }
 };
+const parseBookingDateTime = (date, time) => {
+  if (!date || !time) return null;
+
+  const normalizedDate = new Date(`${date} ${time}`);
+  return isNaN(normalizedDate.getTime()) ? null : normalizedDate;
+};
+
+const pendingTrainerBookings = bookings.filter((booking) => {
+  const bookingStatus = String(booking.status || "").toLowerCase();
+
+  return (
+    bookingStatus !== "cancelled" &&
+    bookingStatus !== "completed" &&
+    !booking.trainerName
+  );
+});
+
+const pendingCompletionBookings = bookings.filter((booking) => {
+  const bookingStatus = String(booking.status || "").toLowerCase();
+
+  if (bookingStatus === "cancelled" || bookingStatus === "completed") {
+    return false;
+  }
+
+  const endDateTime = parseBookingDateTime(booking.date, booking.endTime);
+
+  if (!endDateTime) return false;
+
+  const reminderTime = new Date(endDateTime.getTime() + 15 * 60 * 1000);
+
+  return new Date() >= reminderTime;
+});
+
+const notificationCount =
+  pendingTrainerBookings.length + pendingCompletionBookings.length;
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
       <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -321,12 +357,81 @@ const completeBooking = async (booking) => {
             </div>
           </div>
 
-          <button
-            onClick={logout}
-            className="rounded-lg border border-[#F2994A] px-5 py-2 text-sm font-semibold text-[#F2994A] hover:bg-orange-50 transition"
-          >
-            Logout
-          </button>
+          <div className="relative flex items-center gap-3">
+  <button
+    onClick={() => setShowNotifications(!showNotifications)}
+    className="relative rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+  >
+    🔔
+    {notificationCount > 0 && (
+      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2 py-0.5">
+        {notificationCount}
+      </span>
+    )}
+  </button>
+
+  {showNotifications && (
+    <div className="absolute right-24 top-12 z-50 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl p-4">
+      <h3 className="font-bold text-gray-900 mb-3">Admin Notifications</h3>
+
+      {notificationCount === 0 ? (
+        <p className="text-sm text-gray-500">No pending notifications.</p>
+      ) : (
+        <>
+          {pendingTrainerBookings.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-orange-600 mb-2">
+                Trainers Yet to Assign ({pendingTrainerBookings.length})
+              </p>
+
+              {pendingTrainerBookings.map((booking, index) => (
+                <p key={index} className="text-sm text-gray-700">
+                  • {booking.candidateName} ({booking.candidateId})
+                </p>
+              ))}
+            </div>
+          )}
+
+          {pendingCompletionBookings.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-red-600 mb-2">
+                Status Update Pending ({pendingCompletionBookings.length})
+              </p>
+
+              {pendingCompletionBookings.map((booking, index) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-3 mb-2"
+                >
+                  <p className="text-sm font-semibold text-gray-900">
+                    {booking.candidateName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Interview time passed. Please update status.
+                  </p>
+
+                  <button
+                    onClick={() => completeBooking(booking)}
+                    className="mt-2 rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700"
+                  >
+                    Mark Completed
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )}
+
+  <button
+    onClick={logout}
+    className="rounded-lg border border-[#F2994A] px-5 py-2 text-sm font-semibold text-[#F2994A] hover:bg-orange-50 transition"
+  >
+    Logout
+  </button>
+</div>
         </div>
       </header>
 
