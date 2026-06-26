@@ -317,15 +317,14 @@ function AdminDashboard() {
     return isNaN(dateTime.getTime()) ? null : dateTime;
   };
 
-  const pendingTrainerBookings = bookings.filter((booking) => {
-    const bookingStatus = String(booking.status || "").toLowerCase();
+const pendingTrainerBookings = bookings.filter((booking) => {
+  const bookingStatus = String(booking.status || "").trim().toLowerCase();
 
-    return (
-      bookingStatus !== "cancelled" &&
-      bookingStatus !== "completed" &&
-      !String(booking.trainerName || "").trim()
-    );
-  });
+  return (
+    bookingStatus === "booked" &&
+    !String(booking.trainerName || "").trim()
+  );
+});
 
   const pendingCompletionBookings = bookings.filter((booking) => {
     const bookingStatus = String(booking.status || "").toLowerCase();
