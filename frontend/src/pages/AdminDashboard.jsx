@@ -11,7 +11,6 @@ function AdminDashboard() {
   const [selectedRows, setSelectedRows] = useState({});
   const [loading, setLoading] = useState(false);
   const [trainers, setTrainers] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   const navigate = useNavigate();
 
@@ -28,10 +27,11 @@ function AdminDashboard() {
       }
 
       const response = await API.get(url, {
-  headers: {
-    "Cache-Control": "no-cache",
-  },
-});
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
+
       setBookings(response.data.bookings || []);
     } catch (error) {
       console.error(error);
@@ -47,62 +47,60 @@ function AdminDashboard() {
       setLoading(false);
     }
   };
-const fetchTrainers = async () => {
-  try {
-    const response = await API.get("/admin/trainers", {
-  headers: {
-    "Cache-Control": "no-cache",
-  },
-});
-    setTrainers(response.data.trainers || []);
-  } catch {
-    Swal.fire({
-      icon: "error",
-      title: "Trainer Load Failed",
-      text: "Failed to load trainers.",
-      confirmButtonColor: "#ED8936",
-      width: popupWidth,
-    });
-  }
-};
-  useEffect(() => {
-  const token = localStorage.getItem("adminToken");
 
-  if (!token) {
-    navigate("/admin");
-    return;
-  }
+  const fetchTrainers = async () => {
+    try {
+      const response = await API.get("/admin/trainers", {
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      });
 
-  fetchBookings(status);
-  fetchTrainers();
-
-  const interval = setInterval(() => {
-    fetchBookings(status);
-    fetchTrainers();
-  }, 30000); // Refresh every 30 seconds
-
-  return () => clearInterval(interval);
-}, [navigate, status]);
-useEffect(() => {
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === "visible") {
-      fetchBookings(status);
-      fetchTrainers();
+      setTrainers(response.data.trainers || []);
+    } catch {
+      Swal.fire({
+        icon: "error",
+        title: "Trainer Load Failed",
+        text: "Failed to load trainers.",
+        confirmButtonColor: "#ED8936",
+        width: popupWidth,
+      });
     }
   };
 
-  document.addEventListener(
-    "visibilitychange",
-    handleVisibilityChange
-  );
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
 
-  return () => {
-    document.removeEventListener(
-      "visibilitychange",
-      handleVisibilityChange
-    );
-  };
-}, [status]);
+    if (!token) {
+      navigate("/admin");
+      return;
+    }
+
+    fetchBookings(status);
+    fetchTrainers();
+
+    const interval = setInterval(() => {
+      fetchBookings(status);
+      fetchTrainers();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [navigate, status]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchBookings(status);
+        fetchTrainers();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [status]);
 
   const logout = () => {
     localStorage.removeItem("adminToken");
@@ -110,101 +108,81 @@ useEffect(() => {
   };
 
   const assignTrainer = async (booking) => {
-  if (trainers.length === 0) {
-    Swal.fire({
-      icon: "warning",
-      title: "No Trainers Found",
-      text: "Please add trainers in the Trainers sheet.",
+    if (trainers.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "No Trainers Found",
+        text: "Please add trainers in the Trainers sheet.",
+        confirmButtonColor: "#ED8936",
+        width: popupWidth,
+      });
+      return;
+    }
+
+    const inputOptions = {};
+
+    trainers.forEach((trainer) => {
+      inputOptions[trainer.trainerName] = trainer.trainerName;
+    });
+
+    const result = await Swal.fire({
+      title: booking.trainerName ? "Edit Trainer" : "Assign Trainer",
+      input: "select",
+      inputOptions,
+      inputValue: booking.trainerName || "",
+      inputPlaceholder: "Select trainer",
+      showCancelButton: true,
+      confirmButtonText: booking.trainerName ? "Update" : "Assign",
+      cancelButtonText: "Cancel",
       confirmButtonColor: "#ED8936",
-      width: popupWidth,
-    });
-    return;
-  }
-
-  const inputOptions = {};
-
-  trainers.forEach((trainer) => {
-    inputOptions[trainer.trainerName] = trainer.trainerName;
-  });
-
-  const result = await Swal.fire({
-    title: booking.trainerName ? "Edit Trainer" : "Assign Trainer",
-    input: "select",
-    inputOptions,
-    inputValue: booking.trainerName || "",
-    inputPlaceholder: "Select trainer",
-    showCancelButton: true,
-    confirmButtonText: booking.trainerName ? "Update" : "Assign",
-    cancelButtonText: "Cancel",
-    confirmButtonColor: "#ED8936",
-    cancelButtonColor: "#6B7280",
-    width: window.innerWidth < 640 ? "90%" : "400px",
-    inputValidator: (value) => {
-      if (!value) {
-        return "Please select trainer";
-      }
-    },
-  });
-
-  if (!result.isConfirmed) return;
-
-  try {
-    await API.put("/admin/assign-trainer", {
-      candidateId: booking.candidateId,
-      date: booking.date,
-      startTime: booking.startTime,
-      trainerName: result.value,
+      cancelButtonColor: "#6B7280",
+      width: window.innerWidth < 640 ? "90%" : "400px",
+      inputValidator: (value) => {
+        if (!value) {
+          return "Please select trainer";
+        }
+      },
     });
 
-    await Swal.fire({
-      icon: "success",
-      title: booking.trainerName ? "Trainer Updated" : "Trainer Assigned",
-      text: booking.trainerName
-        ? "Trainer changed successfully."
-        : "Trainer assigned successfully.",
-      confirmButtonColor: "#ED8936",
-      width: popupWidth,
-    });
+    if (!result.isConfirmed) return;
 
-    fetchBookings(status);
-  } catch (error) {
-    Swal.fire({
-      icon: "error",
-      title: "Assignment Failed",
-      text:
-        error.response?.data?.message ||
-        "Failed to assign trainer.",
-      confirmButtonColor: "#ED8936",
-      width: popupWidth,
-    });
-  }
-};
+    try {
+      await API.put("/admin/assign-trainer", {
+        candidateId: booking.candidateId,
+        date: booking.date,
+        startTime: booking.startTime,
+        trainerName: result.value,
+      });
 
-const showBookingText = async (booking) => {
-  const result = await Swal.fire({
-    title: "Booking Details",
-    html: `
-      <div style="font-size:18px;line-height:1.5;color:#4b5563;">
-        ${getBookingText(booking)}
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: "Completed",
-    cancelButtonText: "Close",
-    confirmButtonColor: "#16A34A",
-    cancelButtonColor: "#ED8936",
-    width: window.innerWidth < 640 ? "90%" : "420px",
-  });
+      await Swal.fire({
+        icon: "success",
+        title: booking.trainerName ? "Trainer Updated" : "Trainer Assigned",
+        text: booking.trainerName
+          ? "Trainer changed successfully."
+          : "Trainer assigned successfully.",
+        confirmButtonColor: "#ED8936",
+        width: popupWidth,
+      });
 
-  if (result.isConfirmed) {
-    completeBooking(booking);
-  }
-};
+      fetchBookings(status);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Assignment Failed",
+        text: error.response?.data?.message || "Failed to assign trainer.",
+        confirmButtonColor: "#ED8936",
+        width: popupWidth,
+      });
+    }
+  };
 
   const formatTime = (time) => {
     if (!time) return "";
 
-    if (String(time).toUpperCase().includes("AM") || String(time).toUpperCase().includes("PM")) {
+    if (
+      String(time).toUpperCase().includes("AM") ||
+      String(time).toUpperCase().includes("PM")
+    ) {
       return time;
     }
 
@@ -221,13 +199,243 @@ const showBookingText = async (booking) => {
     });
   };
 
-const getBookingText = (booking) => {
-  return `${formatTime(booking.startTime)} - ${formatTime(
-    booking.endTime
-  )} | ${booking.candidateName} | ${booking.companyName} | ${
-    booking.round
-  } | ${booking.trainerName || "Trainer Not Assigned"}`;
-};
+  const getBookingText = (booking) => {
+    return `${formatTime(booking.startTime)} - ${formatTime(
+      booking.endTime
+    )} | ${booking.candidateName} | ${booking.companyName} | ${
+      booking.round
+    } | ${booking.trainerName || "Trainer Not Assigned"}`;
+  };
+
+  const completeBooking = async (booking) => {
+    const result = await Swal.fire({
+      icon: "question",
+      title: "Mark as Completed?",
+      text: "This booking will be removed from admin and candidate dashboard.",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Complete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#ED8936",
+      cancelButtonColor: "#6B7280",
+      width: popupWidth,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await API.put("/admin/complete-booking", {
+        candidateId: booking.candidateId,
+        date: booking.date,
+        startTime: booking.startTime,
+      });
+
+      await Swal.fire({
+        icon: "success",
+        title: "Completed",
+        text: "Interview is completed.",
+        confirmButtonColor: "#ED8936",
+        width: popupWidth,
+      });
+
+      fetchBookings(status);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed",
+        text: error.response?.data?.message || "Failed to complete booking.",
+        confirmButtonColor: "#ED8936",
+        width: popupWidth,
+      });
+    }
+  };
+
+  const showBookingText = async (booking) => {
+    const result = await Swal.fire({
+      title: "Booking Details",
+      html: `
+        <div style="font-size:18px;line-height:1.5;color:#4b5563;">
+          ${getBookingText(booking)}
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Completed",
+      cancelButtonText: "Close",
+      confirmButtonColor: "#16A34A",
+      cancelButtonColor: "#ED8936",
+      width: window.innerWidth < 640 ? "90%" : "420px",
+    });
+
+    if (result.isConfirmed) {
+      completeBooking(booking);
+    }
+  };
+
+  const parseBookingDateTime = (date, time) => {
+    if (!date || !time) return null;
+
+    const months = {
+      Jan: "01",
+      Feb: "02",
+      Mar: "03",
+      Apr: "04",
+      May: "05",
+      Jun: "06",
+      Jul: "07",
+      Aug: "08",
+      Sep: "09",
+      Oct: "10",
+      Nov: "11",
+      Dec: "12",
+    };
+
+    const dateParts = String(date).trim().split(" ");
+    if (dateParts.length !== 3) return null;
+
+    const [day, monthText, year] = dateParts;
+    const month = months[monthText];
+
+    if (!month) return null;
+
+    const timeParts = String(time).trim().split(" ");
+    if (timeParts.length !== 2) return null;
+
+    let [hour, minute] = timeParts[0].split(":");
+    const meridian = timeParts[1].toLowerCase();
+
+    hour = Number(hour);
+
+    if (meridian === "pm" && hour !== 12) hour += 12;
+    if (meridian === "am" && hour === 12) hour = 0;
+
+    const dateTime = new Date(
+      `${year}-${month}-${day.padStart(2, "0")}T${String(hour).padStart(
+        2,
+        "0"
+      )}:${minute}:00`
+    );
+
+    return isNaN(dateTime.getTime()) ? null : dateTime;
+  };
+
+  const pendingTrainerBookings = bookings.filter((booking) => {
+    const bookingStatus = String(booking.status || "").toLowerCase();
+
+    return (
+      bookingStatus !== "cancelled" &&
+      bookingStatus !== "completed" &&
+      !String(booking.trainerName || "").trim()
+    );
+  });
+
+  const pendingCompletionBookings = bookings.filter((booking) => {
+    const bookingStatus = String(booking.status || "").toLowerCase();
+
+    if (bookingStatus === "cancelled" || bookingStatus === "completed") {
+      return false;
+    }
+
+    const endDateTime = parseBookingDateTime(booking.date, booking.endTime);
+
+    if (!endDateTime) return false;
+
+    const reminderTime = new Date(endDateTime.getTime() + 15 * 60 * 1000);
+
+    return new Date() >= reminderTime;
+  });
+
+  useEffect(() => {
+    if (loading || bookings.length === 0) return;
+
+    const trainerKey = pendingTrainerBookings
+      .map((booking) => booking.candidateId)
+      .join("-");
+
+    const completionKey = pendingCompletionBookings
+      .map((booking) => booking.candidateId)
+      .join("-");
+
+    const savedTrainerKey = sessionStorage.getItem("trainerReminderKey");
+    const savedCompletionKey = sessionStorage.getItem("completionReminderKey");
+
+    const showTrainerPopup =
+      pendingTrainerBookings.length > 0 && trainerKey !== savedTrainerKey;
+
+    const showCompletionPopup =
+      pendingCompletionBookings.length > 0 &&
+      completionKey !== savedCompletionKey;
+
+    if (!showTrainerPopup && !showCompletionPopup) return;
+
+    const showReminders = async () => {
+      if (showTrainerPopup) {
+        sessionStorage.setItem("trainerReminderKey", trainerKey);
+
+        await Swal.fire({
+          icon: "warning",
+          title: "Trainers Yet to Assign",
+          html: `
+            <div style="text-align:left;font-size:14px;line-height:1.8;">
+              ${pendingTrainerBookings
+                .map(
+                  (booking) =>
+                    `• <b>${booking.candidateName}</b> (${booking.candidateId})`
+                )
+                .join("<br/>")}
+            </div>
+          `,
+          confirmButtonText: "OK",
+          confirmButtonColor: "#ED8936",
+          width: window.innerWidth < 640 ? "90%" : "500px",
+        });
+      }
+
+      if (showCompletionPopup) {
+        sessionStorage.setItem("completionReminderKey", completionKey);
+
+        const listHtml = pendingCompletionBookings
+          .map(
+            (booking, index) => `
+              <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px;text-align:left;">
+                <b>${index + 1}. ${booking.candidateName}</b><br/>
+                <span style="font-size:13px;color:#6b7280;">
+                  Candidate ID: ${booking.candidateId}<br/>
+                  Schedule: ${booking.date}, ${formatTime(
+              booking.startTime
+            )} - ${formatTime(booking.endTime)}
+                </span>
+              </div>
+            `
+          )
+          .join("");
+
+        const result = await Swal.fire({
+          icon: "info",
+          title: "Interview Status Update Pending",
+          html: `
+            <p style="font-size:14px;color:#4b5563;text-align:left;">
+              These interviews ended more than 15 minutes ago. Please update their status.
+            </p>
+            ${listHtml}
+          `,
+          showCancelButton: true,
+          confirmButtonText:
+            pendingCompletionBookings.length === 1
+              ? "Mark Completed"
+              : "OK",
+          cancelButtonText: "Later",
+          confirmButtonColor: "#16A34A",
+          cancelButtonColor: "#6B7280",
+          width: window.innerWidth < 640 ? "90%" : "540px",
+        });
+
+        if (result.isConfirmed && pendingCompletionBookings.length === 1) {
+          completeBooking(pendingCompletionBookings[0]);
+        }
+      }
+    };
+
+    showReminders();
+  }, [bookings, loading]);
 
   const filteredBookings = bookings.filter((booking) => {
     const keyword = search.toLowerCase();
@@ -255,124 +463,7 @@ const getBookingText = (booking) => {
     if (bookingStatus === "Rescheduled") return "bg-blue-100 text-blue-700";
     return "bg-gray-100 text-gray-700";
   };
-const completeBooking = async (booking) => {
-  const result = await Swal.fire({
-    icon: "question",
-    title: "Mark as Completed?",
-    text: "This booking will be removed from admin and candidate dashboard.",
-    showCancelButton: true,
-    confirmButtonText: "Yes, Complete",
-    cancelButtonText: "Cancel",
-    confirmButtonColor: "#ED8936",
-    cancelButtonColor: "#6B7280",
-    width: popupWidth,
-  });
 
-  if (!result.isConfirmed) return;
-
-  try {
-    await API.put("/admin/complete-booking", {
-      candidateId: booking.candidateId,
-      date: booking.date,
-      startTime: booking.startTime,
-    });
-
-    await Swal.fire({
-      icon: "success",
-      title: "Completed",
-      text: "Interview is completed.",
-      confirmButtonColor: "#ED8936",
-      width: popupWidth,
-    });
-
-    fetchBookings(status);
-  } catch (error) {
-    Swal.fire({
-      icon: "error",
-      title: "Failed",
-      text:
-        error.response?.data?.message ||
-        "Failed to complete booking.",
-      confirmButtonColor: "#ED8936",
-      width: popupWidth,
-    });
-  }
-};
-const parseBookingDateTime = (date, time) => {
-  if (!date || !time) return null;
-
-  const months = {
-    Jan: "01",
-    Feb: "02",
-    Mar: "03",
-    Apr: "04",
-    May: "05",
-    Jun: "06",
-    Jul: "07",
-    Aug: "08",
-    Sep: "09",
-    Oct: "10",
-    Nov: "11",
-    Dec: "12",
-  };
-
-  const dateParts = String(date).trim().split(" ");
-  if (dateParts.length !== 3) return null;
-
-  const [day, monthText, year] = dateParts;
-  const month = months[monthText];
-
-  if (!month) return null;
-
-  const timeParts = String(time).trim().split(" ");
-  if (timeParts.length !== 2) return null;
-
-  let [hour, minute] = timeParts[0].split(":");
-  const meridian = timeParts[1].toLowerCase();
-
-  hour = Number(hour);
-
-  if (meridian === "pm" && hour !== 12) hour += 12;
-  if (meridian === "am" && hour === 12) hour = 0;
-
-  const dateTime = new Date(
-    `${year}-${month}-${day.padStart(2, "0")}T${String(hour).padStart(
-      2,
-      "0"
-    )}:${minute}:00`
-  );
-
-  return isNaN(dateTime.getTime()) ? null : dateTime;
-};
-
-const pendingTrainerBookings = bookings.filter((booking) => {
-  const bookingStatus = String(booking.status || "").toLowerCase();
-
-  return (
-    bookingStatus !== "cancelled" &&
-    bookingStatus !== "completed" &&
-    !booking.trainerName
-  );
-});
-
-const pendingCompletionBookings = bookings.filter((booking) => {
-  const bookingStatus = String(booking.status || "").toLowerCase();
-
-  if (bookingStatus === "cancelled" || bookingStatus === "completed") {
-    return false;
-  }
-
-  const endDateTime = parseBookingDateTime(booking.date, booking.endTime);
-
-  if (!endDateTime) return false;
-
-  const reminderTime = new Date(endDateTime.getTime() + 15 * 60 * 1000);
-
-  return new Date() >= reminderTime;
-});
-
-const notificationCount =
-  pendingTrainerBookings.length + pendingCompletionBookings.length;
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
       <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -397,81 +488,12 @@ const notificationCount =
             </div>
           </div>
 
-          <div className="relative flex items-center gap-3">
-  <button
-    onClick={() => setShowNotifications(!showNotifications)}
-    className="relative rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-  >
-    🔔
-    {notificationCount > 0 && (
-      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2 py-0.5">
-        {notificationCount}
-      </span>
-    )}
-  </button>
-
-  {showNotifications && (
-    <div className="absolute right-24 top-12 z-50 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl p-4">
-      <h3 className="font-bold text-gray-900 mb-3">Admin Notifications</h3>
-
-      {notificationCount === 0 ? (
-        <p className="text-sm text-gray-500">No pending notifications.</p>
-      ) : (
-        <>
-          {pendingTrainerBookings.length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm font-semibold text-orange-600 mb-2">
-                Trainers Yet to Assign ({pendingTrainerBookings.length})
-              </p>
-
-              {pendingTrainerBookings.map((booking, index) => (
-                <p key={index} className="text-sm text-gray-700">
-                  • {booking.candidateName} ({booking.candidateId})
-                </p>
-              ))}
-            </div>
-          )}
-
-          {pendingCompletionBookings.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold text-red-600 mb-2">
-                Status Update Pending ({pendingCompletionBookings.length})
-              </p>
-
-              {pendingCompletionBookings.map((booking, index) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-3 mb-2"
-                >
-                  <p className="text-sm font-semibold text-gray-900">
-                    {booking.candidateName}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Interview time passed. Please update status.
-                  </p>
-
-                  <button
-                    onClick={() => completeBooking(booking)}
-                    className="mt-2 rounded-lg bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700"
-                  >
-                    Mark Completed
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  )}
-
-  <button
-    onClick={logout}
-    className="rounded-lg border border-[#F2994A] px-5 py-2 text-sm font-semibold text-[#F2994A] hover:bg-orange-50 transition"
-  >
-    Logout
-  </button>
-</div>
+          <button
+            onClick={logout}
+            className="rounded-lg border border-[#F2994A] px-5 py-2 text-sm font-semibold text-[#F2994A] hover:bg-orange-50 transition"
+          >
+            Logout
+          </button>
         </div>
       </header>
 
@@ -586,95 +608,93 @@ const notificationCount =
                   </tr>
                 ) : (
                   filteredBookings.map((booking, index) => (
-                    <>
-                      <tr
-                        key={`row-${index}`}
-                        className="hover:bg-orange-50/40 transition"
-                      >
-                        <td className="px-4 py-4">
+                    <tr
+                      key={`${booking.candidateId}-${booking.date}-${booking.startTime}-${index}`}
+                      className="hover:bg-orange-50/40 transition"
+                    >
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={() => showBookingText(booking)}
+                          className="rounded-lg border border-[#F2994A] px-3 py-1 text-xs font-semibold text-[#F2994A] hover:bg-orange-50"
+                        >
+                          View
+                        </button>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <p className="font-semibold text-gray-900">
+                          {booking.candidateName || "-"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ID: {booking.candidateId || "-"}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        {booking.phone || "-"}
+                      </td>
+
+                      <td className="px-4 py-4 font-medium text-gray-900">
+                        {booking.companyName || "-"}
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        {booking.hrName || "-"}
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        {booking.hrNumber || "-"}
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        {booking.round || "-"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            booking.linkReceived === "Yes"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {booking.linkReceived || "No"}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        <p>{booking.date || "-"}</p>
+                        <p className="text-xs text-gray-500">
+                          {formatTime(booking.startTime) || "-"} -{" "}
+                          {formatTime(booking.endTime) || "-"}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClass(
+                            booking.status
+                          )}`}
+                        >
+                          {booking.status || "-"}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-700">
+                        {booking.trainerName || "-"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <div className="flex justify-center">
                           <button
-  onClick={() => showBookingText(booking)}
-  className="rounded-lg border border-[#F2994A] px-3 py-1 text-xs font-semibold text-[#F2994A] hover:bg-orange-50"
->
-  View
-</button>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <p className="font-semibold text-gray-900">
-                            {booking.candidateName || "-"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            ID: {booking.candidateId || "-"}
-                          </p>
-                        </td>
-
-                        <td className="px-4 py-4 text-gray-700">
-                          {booking.phone || "-"}
-                        </td>
-
-                        <td className="px-4 py-4 font-medium text-gray-900">
-                          {booking.companyName || "-"}
-                        </td>
-
-                        <td className="px-4 py-4 text-gray-700">
-                          {booking.hrName || "-"}
-                        </td>
-
-                        <td className="px-4 py-4 text-gray-700">
-                          {booking.hrNumber || "-"}
-                        </td>
-
-                        <td className="px-4 py-4 text-gray-700">
-                          {booking.round || "-"}
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              booking.linkReceived === "Yes"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-100 text-gray-600"
-                            }`}
+                            onClick={() => assignTrainer(booking)}
+                            className="rounded-lg bg-[#ED8936] px-4 py-2 text-sm font-semibold text-white hover:bg-[#DD6B20] transition"
                           >
-                            {booking.linkReceived || "No"}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-4 text-gray-700">
-  <p>{booking.date || "-"}</p>
-  <p className="text-xs text-gray-500">
-    {formatTime(booking.startTime) || "-"} -{" "}
-    {formatTime(booking.endTime) || "-"}
-  </p>
-</td>
-
-                        <td className="px-4 py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClass(
-                              booking.status
-                            )}`}
-                          >
-                            {booking.status || "-"}
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-4 text-gray-700">
-                          {booking.trainerName || "-"}
-                        </td>
-
-                        <td className="px-4 py-4">
-  <div className="flex justify-center">
-    <button
-      onClick={() => assignTrainer(booking)}
-      className="rounded-lg bg-[#ED8936] px-4 py-2 text-sm font-semibold text-white hover:bg-[#DD6B20] transition"
-    >
-      {booking.trainerName ? "Edit" : "Assign"}
-    </button>
-  </div>
-</td>
-                      </tr>
-                    </>
+                            {booking.trainerName ? "Edit" : "Assign"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ))
                 )}
               </tbody>
