@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import API from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -11,6 +11,9 @@ function AdminDashboard() {
   const [selectedRows, setSelectedRows] = useState({});
   const [loading, setLoading] = useState(false);
   const [trainers, setTrainers] = useState([]);
+  const hasLoadedOnce = useRef(false);
+const lastHiddenTime = useRef(null);
+const statusRef = useRef(status);
 
   const navigate = useNavigate();
 
@@ -67,7 +70,9 @@ function AdminDashboard() {
       });
     }
   };
-
+useEffect(() => {
+  statusRef.current = status;
+}, [status]);
   useEffect(() => {
   const token = localStorage.getItem("adminToken");
 
@@ -76,15 +81,28 @@ function AdminDashboard() {
     return;
   }
 
+  if (hasLoadedOnce.current) return;
+
+  hasLoadedOnce.current = true;
+
   fetchBookings("All");
   fetchTrainers();
 }, []);
-
-  useEffect(() => {
+useEffect(() => {
   const handleVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      lastHiddenTime.current = Date.now();
+      return;
+    }
+
     if (document.visibilityState === "visible") {
-      fetchBookings(status);
-      fetchTrainers();
+      const hiddenFor = Date.now() - (lastHiddenTime.current || Date.now());
+
+      // Refresh only if admin left the page for more than 30 seconds
+      if (hiddenFor > 30000) {
+        fetchBookings(statusRef.current);
+        fetchTrainers();
+      }
     }
   };
 
@@ -93,7 +111,7 @@ function AdminDashboard() {
   return () => {
     document.removeEventListener("visibilitychange", handleVisibilityChange);
   };
-}, [status]);
+}, []);
 useEffect(() => {
   const INACTIVE_LIMIT = 2 * 60 * 60 * 1000; // 2 hours
 
