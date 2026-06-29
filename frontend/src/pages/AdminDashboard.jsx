@@ -78,13 +78,6 @@ function AdminDashboard() {
 
     fetchBookings(status);
     fetchTrainers();
-
-    const interval = setInterval(() => {
-      fetchBookings(status);
-      fetchTrainers();
-    }, 30000);
-
-    return () => clearInterval(interval);
   }, [navigate, status]);
 
   useEffect(() => {
@@ -101,11 +94,56 @@ function AdminDashboard() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [status]);
+useEffect(() => {
+  const INACTIVE_LIMIT = 2 * 60 * 60 * 1000; // 2 hours
 
-  const logout = () => {
-    localStorage.removeItem("adminToken");
-    navigate("/");
+  const checkInactiveSession = () => {
+    const lastActive = localStorage.getItem("adminLastActiveTime");
+
+    if (!lastActive) {
+      localStorage.setItem("adminLastActiveTime", Date.now().toString());
+      return;
+    }
+
+    const inactiveTime = Date.now() - Number(lastActive);
+
+    if (inactiveTime >= INACTIVE_LIMIT) {
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminLastActiveTime");
+
+      Swal.fire({
+        icon: "info",
+        title: "Session Expired",
+        text: "You were logged out due to 2 hours of inactivity.",
+        confirmButtonColor: "#ED8936",
+        width: popupWidth,
+      }).then(() => {
+        navigate("/admin");
+      });
+    } else {
+      localStorage.setItem("adminLastActiveTime", Date.now().toString());
+    }
   };
+
+  const activityEvents = ["click", "mousemove", "keydown", "scroll", "touchstart"];
+
+  activityEvents.forEach((event) => {
+    window.addEventListener(event, checkInactiveSession);
+  });
+
+  checkInactiveSession();
+
+  return () => {
+    activityEvents.forEach((event) => {
+      window.removeEventListener(event, checkInactiveSession);
+    });
+  };
+}, [navigate, popupWidth]);
+  const logout = () => {
+  localStorage.removeItem("adminToken");
+  localStorage.removeItem("adminLastActiveTime");
+  navigate("/");
+};
 
   const assignTrainer = async (booking) => {
     if (trainers.length === 0) {
