@@ -353,15 +353,6 @@ useEffect(() => {
 
 const pendingTrainerBookings = bookings.filter((booking) => {
   const bookingStatus = String(booking.status || "").trim().toLowerCase();
-
-  return (
-    bookingStatus === "booked" &&
-    !String(booking.trainerName || "").trim()
-  );
-});
-
-const pendingTrainerBookings = bookings.filter((booking) => {
-  const bookingStatus = String(booking.status || "").trim().toLowerCase();
   const trainerName = String(booking.trainerName || "").trim();
 
   return (
