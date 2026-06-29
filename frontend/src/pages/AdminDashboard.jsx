@@ -360,29 +360,20 @@ const pendingTrainerBookings = bookings.filter((booking) => {
   );
 });
 
-  const pendingCompletionBookings = bookings.filter((booking) => {
-    const bookingStatus = String(booking.status || "").toLowerCase();
+const pendingTrainerBookings = bookings.filter((booking) => {
+  const bookingStatus = String(booking.status || "").trim().toLowerCase();
+  const trainerName = String(booking.trainerName || "").trim();
 
-    if (bookingStatus === "cancelled" || bookingStatus === "completed") {
-      return false;
-    }
-
-    const endDateTime = parseBookingDateTime(booking.date, booking.endTime);
-
-    if (!endDateTime) return false;
-
-    const reminderTime = new Date(endDateTime.getTime() + 15 * 60 * 1000);
-
-    return new Date() >= reminderTime;
-  });
+  return (
+    bookingStatus === "booked" &&
+    (trainerName === "" || trainerName === "-")
+  );
+});
 
 useEffect(() => {
   if (loading) return;
   if (bookings.length === 0) return;
   if (pendingTrainerBookings.length === 0) return;
-  if (reminderShown.current) return;
-
-  reminderShown.current = true;
 
   Swal.fire({
     icon: "warning",
