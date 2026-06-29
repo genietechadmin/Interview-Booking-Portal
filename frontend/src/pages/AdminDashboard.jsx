@@ -88,30 +88,7 @@ useEffect(() => {
   fetchBookings("All");
   fetchTrainers();
 }, []);
-useEffect(() => {
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === "hidden") {
-      lastHiddenTime.current = Date.now();
-      return;
-    }
 
-    if (document.visibilityState === "visible") {
-      const hiddenFor = Date.now() - (lastHiddenTime.current || Date.now());
-
-      // Refresh only if admin left the page for more than 30 seconds
-      if (hiddenFor > 30000) {
-        fetchBookings(statusRef.current);
-        fetchTrainers();
-      }
-    }
-  };
-
-  document.addEventListener("visibilitychange", handleVisibilityChange);
-
-  return () => {
-    document.removeEventListener("visibilitychange", handleVisibilityChange);
-  };
-}, []);
 useEffect(() => {
   const INACTIVE_LIMIT = 2 * 60 * 60 * 1000; // 2 hours
 
