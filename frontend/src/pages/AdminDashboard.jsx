@@ -375,7 +375,6 @@ const pendingTrainerBookings = bookings.filter((booking) => {
 
     return new Date() >= reminderTime;
   });
-const reminderShown = useRef(false);
 
 useEffect(() => {
   if (loading || bookings.length === 0) return;
