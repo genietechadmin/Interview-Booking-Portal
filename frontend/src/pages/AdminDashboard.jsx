@@ -69,31 +69,31 @@ function AdminDashboard() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+  const token = localStorage.getItem("adminToken");
 
-    if (!token) {
-      navigate("/admin");
-      return;
-    }
+  if (!token) {
+    navigate("/admin");
+    return;
+  }
 
-    fetchBookings(status);
-    fetchTrainers();
-  }, [navigate, status]);
+  fetchBookings("All");
+  fetchTrainers();
+}, []);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchBookings(status);
-        fetchTrainers();
-      }
-    };
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      fetchBookings(status);
+      fetchTrainers();
+    }
+  };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [status]);
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+  };
+}, [status]);
 useEffect(() => {
   const INACTIVE_LIMIT = 2 * 60 * 60 * 1000; // 2 hours
 
