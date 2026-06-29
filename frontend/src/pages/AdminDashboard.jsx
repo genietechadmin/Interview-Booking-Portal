@@ -11,9 +11,10 @@ function AdminDashboard() {
   const [selectedRows, setSelectedRows] = useState({});
   const [loading, setLoading] = useState(false);
   const [trainers, setTrainers] = useState([]);
-  const hasLoadedOnce = useRef(false);
+const hasLoadedOnce = useRef(false);
 const lastHiddenTime = useRef(null);
 const statusRef = useRef(status);
+const reminderShown = useRef(false);
 
   const navigate = useNavigate();
 
@@ -374,7 +375,35 @@ const pendingTrainerBookings = bookings.filter((booking) => {
 
     return new Date() >= reminderTime;
   });
+const reminderShown = useRef(false);
 
+useEffect(() => {
+  if (loading || bookings.length === 0) return;
+
+  if (reminderShown.current) return;
+
+  reminderShown.current = true;
+
+  if (pendingTrainerBookings.length > 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Trainers Yet to Assign",
+      html: `
+        <div style="text-align:left;font-size:14px;line-height:1.8;">
+          ${pendingTrainerBookings
+            .map(
+              (booking) =>
+                `• <b>${booking.candidateName}</b> (${booking.candidateId})`
+            )
+            .join("<br/>")}
+        </div>
+      `,
+      confirmButtonText: "OK",
+      confirmButtonColor: "#ED8936",
+      width: window.innerWidth < 640 ? "90%" : "500px",
+    });
+  }
+}, [bookings, loading]);
   const filteredBookings = bookings.filter((booking) => {
     const keyword = search.toLowerCase();
 
